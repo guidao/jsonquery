@@ -2,7 +2,6 @@ package jsonquery
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/pkg/errors"
 )
 
@@ -11,6 +10,7 @@ type JsonQuery struct {
 }
 
 type Value interface {
+	Bool() (bool, error)
 	String() (string, error)
 	Float64() (float64, error)
 	Interface() (interface{}, error)
@@ -119,4 +119,14 @@ func (this *jsonValue) Float64() (float64, error) {
 		return n, nil
 	}
 	return 0, errors.New("value not float64")
+}
+
+func (this *jsonValue) Bool() (bool, error) {
+	if this.err != nil {
+		return false, this.err
+	}
+	if b, ok := this.value.(bool); ok {
+		return b, nil
+	}
+	return false, errors.New("value not bool")
 }
