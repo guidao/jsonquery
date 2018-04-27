@@ -164,3 +164,17 @@ func (this *jsonValue) Bool() (bool, error) {
 	}
 	return false, errors.New("value not bool")
 }
+
+func (this *jsonValue) Unmarshal(v interface{}) error {
+	if this.err != nil {
+		return this.err
+	}
+	data, err := json.Marshal(this.value)
+	if err != nil {
+		return errors.Cause(err)
+	}
+	if err = json.Unmarshal(data, v); err != nil {
+		return errors.Cause(err)
+	}
+	return nil
+}
