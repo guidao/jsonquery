@@ -1,4 +1,4 @@
-package json_query
+package jsonquery
 
 import (
 	"testing"
