@@ -7,7 +7,7 @@
 ```go
 func main(){
     v := `{"key": [1,2,3]}`
-    value, err := NewLens().Key("key").Index(1).GetWithJson(v).Float64()
+    value, err := jsonquery.NewLens().Key("key").Index(1).GetWithJson(v).Float64()
     fmt.Println(v) // 2
 }
 ```
