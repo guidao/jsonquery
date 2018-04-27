@@ -105,11 +105,10 @@ func (this *jsonValue) Interface() (interface{}, error) {
 }
 
 func (this *jsonValue) InterfaceOr(def interface{}) interface{} {
-	v, err := this.Interface()
-	if err != nil {
-		return def
+	if v, err := this.Interface(); err == nil {
+		return v
 	}
-	return v
+	return def
 }
 
 func (this *jsonValue) Error() error {
@@ -117,7 +116,7 @@ func (this *jsonValue) Error() error {
 }
 
 func (this *jsonValue) StringOr(def string) string {
-	if v, err := this.String(); err != nil {
+	if v, err := this.String(); err == nil {
 		return v
 	}
 	return def
@@ -134,7 +133,7 @@ func (this *jsonValue) String() (string, error) {
 }
 
 func (this *jsonValue) Float64Or(def float64) float64 {
-	if v, err := this.Float64(); err != nil {
+	if v, err := this.Float64(); err == nil {
 		return v
 	}
 	return def
@@ -151,7 +150,7 @@ func (this *jsonValue) Float64() (float64, error) {
 }
 
 func (this *jsonValue) BoolOr(def bool) bool {
-	if v, err := this.Bool(); err != nil {
+	if v, err := this.Bool(); err == nil {
 		return v
 	}
 	return def
