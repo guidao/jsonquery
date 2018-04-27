@@ -21,6 +21,10 @@ type Value interface {
 
 	Interface() (interface{}, error)
 	InterfaceOr(interface{}) interface{}
+
+	ForeachMap(func(string, Value)) error
+	ForeachArray(func(int, Value)) error
+
 	Error() error
 }
 
@@ -177,4 +181,28 @@ func (this *jsonValue) Unmarshal(v interface{}) error {
 		return errors.Cause(err)
 	}
 	return nil
+}
+
+func (this *jsonValue) ForeachMap(fn func(k string, v Value)) error {
+	if this.err != nil {
+		return errors.Cause(this.err)
+	}
+	if m, ok := this.value.(map[string]interface{}); ok {
+		for key, value := range m {
+			fn(key, &jsonValue{value: value})
+		}
+	}
+	return errors.New("not object")
+}
+
+func (this *jsonValue) ForeachArray(fn func(i int, v Value)) error {
+	if this.err != nil {
+		return errors.Cause(this.err)
+	}
+	if m, ok := this.value.([]interface{}); ok {
+		for i, value := range m {
+			fn(i, &jsonValue{value: value})
+		}
+	}
+	return errors.New("not object")
 }
