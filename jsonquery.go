@@ -11,9 +11,16 @@ type JsonQuery struct {
 
 type Value interface {
 	Bool() (bool, error)
+	BoolOr(bool) bool
+
 	String() (string, error)
+	StringOr(string) string
+
 	Float64() (float64, error)
+	Float64Or(float64) float64
+
 	Interface() (interface{}, error)
+	InterfaceOr(interface{}) interface{}
 	Error() error
 }
 
@@ -97,8 +104,23 @@ func (this *jsonValue) Interface() (interface{}, error) {
 	return this.value, nil
 }
 
+func (this *jsonValue) InterfaceOr(def interface{}) interface{} {
+	v, err := this.Interface()
+	if err != nil {
+		return def
+	}
+	return v
+}
+
 func (this *jsonValue) Error() error {
 	return this.err
+}
+
+func (this *jsonValue) StringOr(def string) string {
+	if v, err := this.String(); err != nil {
+		return v
+	}
+	return def
 }
 
 func (this *jsonValue) String() (string, error) {
@@ -111,6 +133,13 @@ func (this *jsonValue) String() (string, error) {
 	return "", errors.New("value not string")
 }
 
+func (this *jsonValue) Float64Or(def float64) float64 {
+	if v, err := this.Float64(); err != nil {
+		return v
+	}
+	return def
+}
+
 func (this *jsonValue) Float64() (float64, error) {
 	if this.err != nil {
 		return 0, this.err
@@ -121,6 +150,12 @@ func (this *jsonValue) Float64() (float64, error) {
 	return 0, errors.New("value not float64")
 }
 
+func (this *jsonValue) BoolOr(def bool) bool {
+	if v, err := this.Bool(); err != nil {
+		return v
+	}
+	return def
+}
 func (this *jsonValue) Bool() (bool, error) {
 	if this.err != nil {
 		return false, this.err
