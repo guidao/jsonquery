@@ -25,12 +25,82 @@ type Value interface {
 	ForeachMap(func(string, Value)) error
 	ForeachArray(func(int, Value)) error
 
+	Set(keys *Lens, value interface{}) Value
+
 	Error() error
 }
 
+type Access interface {
+	Get(interface{}) (interface{}, error)
+	Set(interface{}, interface{}) error
+}
+
+type KeyType int
+
+var (
+	ObjectKey  KeyType = 0
+	ArrayIndex KeyType = 1
+)
+
+type access struct {
+	keyType KeyType
+	key     interface{}
+}
+
+func (this *access) Get(o interface{}) (interface{}, error) {
+	if o == nil {
+		return nil, errors.New("object is nil")
+	}
+	switch this.keyType {
+	case ObjectKey:
+		m, ok := o.(map[string]interface{})
+		if !ok {
+			return nil, errors.Errorf("key is not a map:%v", this.key)
+		}
+		if v, ok := m[this.key.(string)]; ok {
+			return v, nil
+		}
+		return nil, errors.Errorf("key not found:%v", this.key)
+	case ArrayIndex:
+		m, ok := o.([]interface{})
+		if !ok {
+			return nil, errors.Errorf("key is not a array:%v", this.key)
+		}
+		if len(m) <= this.key.(int) {
+			return nil, errors.Errorf("key is out of array:%v", this.key)
+		}
+		return m[this.key.(int)], nil
+	default:
+		return nil, errors.Errorf("key type error:%v", this.key)
+	}
+}
+
+func (this *access) Set(o interface{}, value interface{}) error {
+	if o == nil {
+		return errors.New("object is nil")
+	}
+	switch this.keyType {
+	case ObjectKey:
+		m, ok := o.(map[string]interface{})
+		if !ok {
+			return errors.Errorf("key is not a map:%v", this.key)
+		}
+		m[this.key.(string)] = value
+		return nil
+	case ArrayIndex:
+		m, ok := o.([]interface{})
+		if !ok {
+			return errors.Errorf("key is not a array:%v", this.key)
+		}
+		m[this.key.(int)] = value
+		return nil
+	default:
+		return errors.Errorf("key type error:%v", this.key)
+	}
+}
+
 type Lens struct {
-	lens []func(interface{}) (interface{}, error)
-	data interface{}
+	lens []Access
 	err  error
 }
 
@@ -39,36 +109,12 @@ func NewLens() *Lens {
 }
 
 func (this *Lens) Key(k string) *Lens {
-	this.lens = append(this.lens, func(input interface{}) (interface{}, error) {
-		if input == nil {
-			return nil, errors.Errorf("not found key:%v", k)
-		}
-		m, ok := input.(map[string]interface{})
-		if !ok {
-			return nil, errors.Errorf("not a object:%v", input)
-		}
-		if v, ok := m[k]; ok {
-			return v, nil
-		}
-		return nil, errors.Errorf("not found key:%v", k)
-	})
+	this.lens = append(this.lens, &access{keyType: ObjectKey, key: k})
 	return this
 }
 
 func (this *Lens) Index(i int) *Lens {
-	this.lens = append(this.lens, func(input interface{}) (interface{}, error) {
-		if input == nil {
-			return nil, errors.Errorf("not found index:%v", i)
-		}
-		m, ok := input.([]interface{})
-		if !ok {
-			return nil, errors.Errorf("not a array:%v", input)
-		}
-		if len(m) <= i {
-			return nil, errors.Errorf("array len less index:%v, len:%v", i, len(m))
-		}
-		return m[i], nil
-	})
+	this.lens = append(this.lens, &access{keyType: ArrayIndex, key: i})
 	return this
 }
 
@@ -88,7 +134,7 @@ func (this *Lens) GetWithValue(data interface{}) Value {
 	v := data
 	for _, f := range this.lens {
 		var err error
-		v, err = f(v)
+		v, err = f.Get(v)
 		if err != nil {
 			return &jsonValue{err: err}
 		}
@@ -205,4 +251,22 @@ func (this *jsonValue) ForeachArray(fn func(i int, v Value)) error {
 		}
 	}
 	return errors.New("not object")
+}
+
+func (this *jsonValue) Set(keys *Lens, value interface{}) Value {
+	if len(keys.lens) == 0 || keys == nil {
+		this.value = value
+		return this
+	}
+	get := &Lens{lens: keys.lens[:len(keys.lens)-1]}
+	object, err := get.GetWithValue(this.InterfaceOr(nil)).Interface()
+	if err != nil {
+		this.err = errors.Cause(err)
+		return this
+	}
+	err = keys.lens[len(keys.lens)-1].Set(object, value)
+	if err != nil {
+		this.err = errors.Cause(err)
+	}
+	return this
 }
