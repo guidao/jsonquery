@@ -25,9 +25,9 @@ func main() {
 		// i:1, v:world
 		// i:2, v:23
 	})
+	fmt.Println(err) //nil
 
 	o := jq.NewLens().Key("array").GetWithJson(`{"array": ["hello", "world"]}`)
 	o = o.Set(jq.NewLens().Index(0), "HELLO")
 	fmt.Println(o.InterfaceOr(nil)) //["HELLO", "world"]
-	fmt.Println(err)                //nil
 }

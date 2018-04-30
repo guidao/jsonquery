@@ -142,6 +142,26 @@ func (this *Lens) GetWithValue(data interface{}) Value {
 	return &jsonValue{value: v}
 }
 
+func (this *Lens) set(object, value interface{}) Value {
+	if this.err != nil {
+		return &jsonValue{err: this.err}
+	}
+	length := len(this.lens)
+	o := object
+	for i, f := range this.lens {
+		if i == length-1 {
+			f.Set(o, value)
+			return &jsonValue{value: object}
+		}
+		var err error
+		o, err = f.Get(o)
+		if err != nil {
+			return &jsonValue{err: err}
+		}
+	}
+	return &jsonValue{value: object}
+}
+
 type jsonValue struct {
 	value interface{}
 	err   error
@@ -249,6 +269,7 @@ func (this *jsonValue) ForeachArray(fn func(i int, v Value)) error {
 		for i, value := range m {
 			fn(i, &jsonValue{value: value})
 		}
+		return nil
 	}
 	return errors.New("not object")
 }
@@ -258,15 +279,8 @@ func (this *jsonValue) Set(keys *Lens, value interface{}) Value {
 		this.value = value
 		return this
 	}
-	get := &Lens{lens: keys.lens[:len(keys.lens)-1]}
-	object, err := get.GetWithValue(this.InterfaceOr(nil)).Interface()
-	if err != nil {
-		this.err = errors.Cause(err)
+	if this.err != nil {
 		return this
 	}
-	err = keys.lens[len(keys.lens)-1].Set(object, value)
-	if err != nil {
-		this.err = errors.Cause(err)
-	}
-	return this
+	return keys.set(this.InterfaceOr(nil), value)
 }
