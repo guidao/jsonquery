@@ -92,7 +92,11 @@ func (this *access) Set(o interface{}, value interface{}) error {
 		if !ok {
 			return errors.Errorf("key is not a array:%v", this.key)
 		}
-		m[this.key.(int)] = value
+		idx := this.key.(int)
+		if idx >= len(m) {
+			return errors.Errorf("index is out of box:%v", idx)
+		}
+		m[idx] = value
 		return nil
 	default:
 		return errors.Errorf("key type error:%v", this.key)
@@ -150,7 +154,10 @@ func (this *Lens) set(object, value interface{}) Value {
 	o := object
 	for i, f := range this.lens {
 		if i == length-1 {
-			f.Set(o, value)
+			err := f.Set(o, value)
+			if err != nil {
+				return &jsonValue{err: err}
+			}
 			return &jsonValue{value: object}
 		}
 		var err error
